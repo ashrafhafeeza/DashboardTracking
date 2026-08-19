@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Leads CS - Juli (Auto Sync)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans p-6">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- HEADER -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold text-slate-900">Dashboard Tracking CS SKS</h1>
+          <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">Bulan: Juli</span>
+        </div>
+        <p class="text-slate-500 text-sm mt-1">Real-time update dari Google Sheets Sekolah</p>
+      </div>
+      
+      <div class="flex gap-3 items-center">
+        <label for="csFilter" class="text-sm font-medium text-slate-600">Filter CS:</label>
+        <select id="csFilter" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="ALL">Semua CS</option>
+        </select>
+        <button onclick="fetchData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">
+          🔄 Sync Data
+        </button>
+      </div>
+    </header>
+
+    <!-- METRICS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
+        <p class="text-sm font-medium text-slate-500">Total Leads (Juli)</p>
+        <p id="cardTotalLead" class="text-3xl font-bold text-slate-900 mt-2">0</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-yellow-500">
+        <p class="text-sm font-medium text-slate-500">Potensial (Follow Up)</p>
+        <p id="cardPotensial" class="text-3xl font-bold text-slate-900 mt-2">0</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-green-500">
+        <p class="text-sm font-medium text-slate-500">Closing Form (Converted)</p>
+        <p id="cardClosing" class="text-3xl font-bold text-slate-900 mt-2">0</p>
+      </div>
+    </div>
+
+    <!-- GRAFIK -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-semibold mb-4">📊 Rekap Performa CS Bulan Juli</h2>
+      <div class="relative h-72 w-full">
+        <canvas id="leadsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- TABEL -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <h2 class="text-lg font-semibold mb-4">📋 Laporan Detail Harian</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+              <th class="p-3">Tanggal</th>
+              <th class="p-3">Nama CS</th>
+              <th class="p-3">New Leads</th>
+              <th class="p-3">Existing Leads</th>
+              <th class="p-3">Total Leads</th>
+              <th class="p-3">Potensial</th>
+              <th class="p-3">Closing</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
+            <tr>
+              <td colspan="7" class="p-4 text-center text-slate-400">Sedang menyinkronkan data...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const SPREADSHEET_ID = '1QoN0mdOEU_E3oxbMkaSI_D6zSwyWRPhsaQj0tLMO8bQ';
+    const GID = '1081523478';
+    
+    // JSONP digunakan karena halaman ini dapat dibuka langsung dari file://.
+    const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json;responseHandler:handleGoogleResponse&gid=${GID}`;
+
+    let rawData = [];
+    let chartInstance = null;
+
+    function fetchData() {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = GVIZ_URL;
+        script.onerror = () => reject(new Error('Google Sheets tidak dapat diakses.'));
+
+        window.handleGoogleResponse = (json) => {
+          try {
+            if (json.status !== 'ok') {
+              throw new Error(json.errors?.[0]?.detailed_message || 'Respons Google Sheets tidak valid.');
+            }
+            parseGoogleVizData(json.table.rows);
+            resolve();
+          } catch (err) {
+            reject(err);
+          } finally {
+            script.remove();
+          }
+        };
+
+        script.onload = () => {
+          if (!window.handleGoogleResponse) {
+            reject(new Error('Callback Google Sheets tidak ditemukan.'));
+          }
+        };
+        document.head.appendChild(script);
+      }).catch((err) => {
+        console.error("Gagal mengambil data:", err);
+        document.getElementById('tableBody').innerHTML =
+          `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal terhubung ke Google Sheets: ${err.message}</td></tr>`;
+      });
+    }
+
+    function parseGoogleVizData(rows) {
+      rawData = [];
+      let currentDate = '';
+      
+      // Google Viz mengosongkan tanggal pada baris lanjutan dalam satu kelompok tanggal.
+      for (let i = 0; i < rows.length; i++) {
+        const c = rows[i].c;
+        if (!c || !c[1]) continue;
+
+        if (c[0]) {
+          currentDate = c[0].f || c[0].v || currentDate;
+        }
+        const dateVal = currentDate;
+        const namaCS = String(c[1].v || '-').trim();
+
+        // Filter Hanya Bulan Juli
+        if (isJuly(dateVal)) {
+          rawData.push({
+            tanggal: dateVal,
+            namaCS: namaCS,
+            newLeads: c[2] ? (c[2].v || 0) : 0,
+            existingLeads: c[3] ? (c[3].v || 0) : 0,
+            totalLeads: c[4] ? (c[4].v || 0) : 0,
+            potensial: c[6] ? (c[6].v || 0) : 0,     // Kolom G
+            closingForm: c[7] ? (c[7].v || 0) : 0   // Kolom H
+          });
+        }
+      }
+
+      populateCSFilter(rawData);
+      renderDashboard(rawData);
+    }
+
+    function isJuly(dateStr) {
+      if (!dateStr) return false;
+      const str = String(dateStr).toLowerCase();
+      return str.includes('juli') || str.includes('jul') || str.includes('/07/') || str.includes('-07-');
+    }
+
+    function populateCSFilter(data) {
+      const csSet = new Set(data.map(item => item.namaCS).filter(name => name !== '-'));
+      const select = document.getElementById('csFilter');
+      select.innerHTML = '<option value="ALL">Semua CS</option>';
+      
+      csSet.forEach(cs => {
+        const option = document.createElement('option');
+        option.value = cs;
+        option.textContent = cs;
+        select.appendChild(option);
+      });
+    }
+
+    function renderDashboard(data) {
+      const totalLead = data.reduce((sum, item) => sum + item.totalLeads, 0);
+      const totalPotensial = data.reduce((sum, item) => sum + item.potensial, 0);
+      const totalClosing = data.reduce((sum, item) => sum + item.closingForm, 0);
+
+      document.getElementById('cardTotalLead').textContent = totalLead.toLocaleString('id-ID');
+      document.getElementById('cardPotensial').textContent = totalPotensial.toLocaleString('id-ID');
+      document.getElementById('cardClosing').textContent = totalClosing.toLocaleString('id-ID');
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Tidak ada data untuk bulan Juli.</td></tr>`;
+      } else {
+        data.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50';
+          tr.innerHTML = `
+            <td class="p-3 text-slate-500">${item.tanggal}</td>
+            <td class="p-3 font-medium text-slate-900">${item.namaCS}</td>
+            <td class="p-3 text-slate-600">${item.newLeads}</td>
+            <td class="p-3 text-slate-600">${item.existingLeads}</td>
+            <td class="p-3 font-semibold text-blue-600">${item.totalLeads}</td>
+            <td class="p-3 font-semibold text-yellow-600">${item.potensial}</td>
+            <td class="p-3 font-semibold text-green-600">${item.closingForm}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      updateChart(data);
+    }
+
+    function updateChart(data) {
+      const csSummary = {};
+      data.forEach(item => {
+        if (!csSummary[item.namaCS]) {
+          csSummary[item.namaCS] = { total: 0, potensial: 0, closing: 0 };
+        }
+        csSummary[item.namaCS].total += item.totalLeads;
+        csSummary[item.namaCS].potensial += item.potensial;
+        csSummary[item.namaCS].closing += item.closingForm;
+      });
+
+      const labels = Object.keys(csSummary);
+      const totals = labels.map(l => csSummary[l].total);
+      const potensials = labels.map(l => csSummary[l].potensial);
+      const closings = labels.map(l => csSummary[l].closing);
+
+      const ctx = document.getElementById('leadsChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Total Leads', data: totals, backgroundColor: '#3B82F6' },
+            { label: 'Potensial', data: potensials, backgroundColor: '#EAB308' },
+            { label: 'Closing Form', data: closings, backgroundColor: '#22C55E' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    document.getElementById('csFilter').addEventListener('change', (e) => {
+      const selected = e.target.value;
+      if (selected === 'ALL') {
+        renderDashboard(rawData);
+      } else {
+        const filtered = rawData.filter(item => item.namaCS === selected);
+        renderDashboard(filtered);
+      }
+    });
+
+    fetchData();
+    // Otomatis update data setiap 3 menit
+    setInterval(fetchData, 180000);
+  </script>
+</body>
+</html>
