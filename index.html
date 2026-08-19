@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Leads CS - Juli (Auto Sync)</title>
+  <title>Dashboard Tracking CS SKS - Multi Menu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -22,9 +22,9 @@
       </div>
       
       <div class="flex gap-3 items-center">
-        <label for="csFilter" class="text-sm font-medium text-slate-600">Filter CS:</label>
+        <label for="csFilter" id="filterLabel" class="text-sm font-medium text-slate-600">Filter CS:</label>
         <select id="csFilter" class="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="ALL">Semua CS</option>
+          <option value="ALL">Semua Data</option>
         </select>
         <button onclick="fetchData()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">
           🔄 Sync Data
@@ -32,49 +32,43 @@
       </div>
     </header>
 
+    <!-- NAVIGASI MENU TAB -->
+    <div class="flex border-b border-slate-200 bg-white rounded-xl p-1 shadow-sm gap-1">
+      <button onclick="switchTab('report_leads')" id="tab-report_leads" class="tab-btn flex-1 py-2.5 px-4 text-center rounded-lg font-medium text-sm transition bg-blue-600 text-white shadow">
+        1. Report Leads
+      </button>
+      <button onclick="switchTab('rekap_cmb')" id="tab-rekap_cmb" class="tab-btn flex-1 py-2.5 px-4 text-center rounded-lg font-medium text-sm transition text-slate-600 hover:bg-slate-100">
+        2. Rekapitulasi CMB
+      </button>
+      <button onclick="switchTab('rekap_murid')" id="tab-rekap_murid" class="tab-btn flex-1 py-2.5 px-4 text-center rounded-lg font-medium text-sm transition text-slate-600 hover:bg-slate-100">
+        3. Rekapitulasi Murid
+      </button>
+    </div>
+
     <!-- METRICS -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
-        <p class="text-sm font-medium text-slate-500">Total Leads (Juli)</p>
-        <p id="cardTotalLead" class="text-3xl font-bold text-slate-900 mt-2">0</p>
-      </div>
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-yellow-500">
-        <p class="text-sm font-medium text-slate-500">Potensial (Follow Up)</p>
-        <p id="cardPotensial" class="text-3xl font-bold text-slate-900 mt-2">0</p>
-      </div>
-      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-green-500">
-        <p class="text-sm font-medium text-slate-500">Closing Form (Converted)</p>
-        <p id="cardClosing" class="text-3xl font-bold text-slate-900 mt-2">0</p>
-      </div>
+    <div id="metricsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Kartu Metrik Diisi Dinamis Lewat JS -->
     </div>
 
-    <!-- GRAFIK -->
+    <!-- GRAFIK PIE -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h2 class="text-lg font-semibold mb-4">📊 Rekap Performa CS Bulan Juli</h2>
-      <div class="relative h-72 w-full">
-        <canvas id="leadsChart"></canvas>
+      <h2 id="chartTitle" class="text-lg font-semibold mb-4">📊 Persentase & Distribusi Data (Pie Chart)</h2>
+      <div class="relative h-80 w-full flex justify-center items-center">
+        <canvas id="mainChart"></canvas>
       </div>
     </div>
 
-    <!-- TABEL -->
+    <!-- TABEL DATA -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <h2 class="text-lg font-semibold mb-4">📋 Laporan Detail Harian</h2>
+      <h2 id="tableTitle" class="text-lg font-semibold mb-4">📋 Laporan Detail</h2>
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-              <th class="p-3">Tanggal</th>
-              <th class="p-3">Nama CS</th>
-              <th class="p-3">New Leads</th>
-              <th class="p-3">Existing Leads</th>
-              <th class="p-3">Total Leads</th>
-              <th class="p-3">Potensial</th>
-              <th class="p-3">Closing</th>
-            </tr>
+          <thead id="tableHeader">
+            <!-- Header Diisi Dinamis Lewat JS -->
           </thead>
           <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
             <tr>
-              <td colspan="7" class="p-4 text-center text-slate-400">Sedang menyinkronkan data...</td>
+              <td colspan="8" class="p-4 text-center text-slate-400">Sedang menyinkronkan data...</td>
             </tr>
           </tbody>
         </table>
@@ -86,11 +80,10 @@
   <script>
     const SPREADSHEET_ID = '1QoN0mdOEU_E3oxbMkaSI_D6zSwyWRPhsaQj0tLMO8bQ';
     const GID = '1081523478';
-    
-    // JSONP digunakan karena halaman ini dapat dibuka langsung dari file://.
     const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json;responseHandler:handleGoogleResponse&gid=${GID}`;
 
-    let rawData = [];
+    let rawRows = [];
+    let currentTab = 'report_leads';
     let chartInstance = null;
 
     function fetchData() {
@@ -102,9 +95,10 @@
         window.handleGoogleResponse = (json) => {
           try {
             if (json.status !== 'ok') {
-              throw new Error(json.errors?.[0]?.detailed_message || 'Respons Google Sheets tidak valid.');
+              throw new Error('Respons Google Sheets tidak valid.');
             }
-            parseGoogleVizData(json.table.rows);
+            rawRows = json.table.rows;
+            renderCurrentMenu();
             resolve();
           } catch (err) {
             reject(err);
@@ -113,90 +107,114 @@
           }
         };
 
-        script.onload = () => {
-          if (!window.handleGoogleResponse) {
-            reject(new Error('Callback Google Sheets tidak ditemukan.'));
-          }
-        };
         document.head.appendChild(script);
       }).catch((err) => {
         console.error("Gagal mengambil data:", err);
         document.getElementById('tableBody').innerHTML =
-          `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal terhubung ke Google Sheets: ${err.message}</td></tr>`;
+          `<tr><td colspan="8" class="p-4 text-center text-red-500">Gagal terhubung: ${err.message}</td></tr>`;
       });
     }
 
-    function parseGoogleVizData(rows) {
-      rawData = [];
+    function switchTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow');
+        btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+      });
+
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+      activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+      activeBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+
+      renderCurrentMenu();
+    }
+
+    function renderCurrentMenu() {
+      if (!rawRows || rawRows.length === 0) return;
+
+      if (currentTab === 'report_leads') {
+        renderReportLeads();
+      } else if (currentTab === 'rekap_cmb') {
+        renderRekapCMB();
+      } else if (currentTab === 'rekap_murid') {
+        renderRekapMurid();
+      }
+    }
+
+    // --- MENU 1: REPORT LEADS ---
+    function renderReportLeads() {
+      document.getElementById('filterLabel').textContent = "Filter CS:";
+      document.getElementById('chartTitle').textContent = "📊 Distribusi Status Leads";
+      let data = [];
       let currentDate = '';
-      
-      // Google Viz mengosongkan tanggal pada baris lanjutan dalam satu kelompok tanggal.
-      for (let i = 0; i < rows.length; i++) {
-        const c = rows[i].c;
+
+      // Pemetaan Indeks Kolom A - K (0 - 10)
+      for (let i = 0; i < rawRows.length; i++) {
+        const c = rawRows[i].c;
         if (!c || !c[1]) continue;
 
-        if (c[0]) {
-          currentDate = c[0].f || c[0].v || currentDate;
-        }
+        if (c[0]) currentDate = c[0].f || c[0].v || currentDate;
         const dateVal = currentDate;
         const namaCS = String(c[1].v || '-').trim();
 
-        // Filter Hanya Bulan Juli
         if (isJuly(dateVal)) {
-          rawData.push({
+          data.push({
             tanggal: dateVal,
             namaCS: namaCS,
-            newLeads: c[2] ? (c[2].v || 0) : 0,
-            existingLeads: c[3] ? (c[3].v || 0) : 0,
-            totalLeads: c[4] ? (c[4].v || 0) : 0,
-            potensial: c[6] ? (c[6].v || 0) : 0,     // Kolom G
-            closingForm: c[7] ? (c[7].v || 0) : 0   // Kolom H
+            newLeads: c[2] ? (c[2].v || 0) : 0,        // Col C
+            existingLeads: c[3] ? (c[3].v || 0) : 0,   // Col D
+            totalLeads: c[4] ? (c[4].v || 0) : 0,      // Col E
+            callIn: c[5] ? (c[5].v || 0) : 0,          // Col F
+            potensial: c[6] ? (c[6].v || 0) : 0,       // Col G
+            closingForm: c[7] ? (c[7].v || 0) : 0,     // Col H
+            tidakPotensial: c[8] ? (c[8].v || 0) : 0,  // Col I
+            kuotaFull: c[9] ? (c[9].v || 0) : 0,       // Col J
+            closingUP: c[10] ? (c[10].v || 0) : 0      // Col K
           });
         }
       }
 
-      populateCSFilter(rawData);
-      renderDashboard(rawData);
-    }
+      populateFilter(data, 'namaCS');
+      const selectedCS = document.getElementById('csFilter').value;
+      const filteredData = (selectedCS === 'ALL') ? data : data.filter(d => d.namaCS === selectedCS);
 
-    function isJuly(dateStr) {
-      if (!dateStr) return false;
-      const str = String(dateStr).toLowerCase();
-      return str.includes('juli') || str.includes('jul') || str.includes('/07/') || str.includes('-07-');
-    }
+      const totalLead = filteredData.reduce((s, d) => s + d.totalLeads, 0);
+      const totalPotensial = filteredData.reduce((s, d) => s + d.potensial, 0);
+      const totalClosing = filteredData.reduce((s, d) => s + d.closingForm, 0);
 
-    function populateCSFilter(data) {
-      const csSet = new Set(data.map(item => item.namaCS).filter(name => name !== '-'));
-      const select = document.getElementById('csFilter');
-      select.innerHTML = '<option value="ALL">Semua CS</option>';
-      
-      csSet.forEach(cs => {
-        const option = document.createElement('option');
-        option.value = cs;
-        option.textContent = cs;
-        select.appendChild(option);
-      });
-    }
+      document.getElementById('metricsContainer').innerHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
+          <p class="text-sm font-medium text-slate-500">Total Leads (Juli)</p>
+          <p class="text-3xl font-bold text-slate-900 mt-2">${totalLead.toLocaleString('id-ID')}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-yellow-500">
+          <p class="text-sm font-medium text-slate-500">Potensial (Follow Up)</p>
+          <p class="text-3xl font-bold text-slate-900 mt-2">${totalPotensial.toLocaleString('id-ID')}</p>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-green-500">
+          <p class="text-sm font-medium text-slate-500">Closing Form (Converted)</p>
+          <p class="text-3xl font-bold text-slate-900 mt-2">${totalClosing.toLocaleString('id-ID')}</p>
+        </div>
+      `;
 
-    function renderDashboard(data) {
-      const totalLead = data.reduce((sum, item) => sum + item.totalLeads, 0);
-      const totalPotensial = data.reduce((sum, item) => sum + item.potensial, 0);
-      const totalClosing = data.reduce((sum, item) => sum + item.closingForm, 0);
-
-      document.getElementById('cardTotalLead').textContent = totalLead.toLocaleString('id-ID');
-      document.getElementById('cardPotensial').textContent = totalPotensial.toLocaleString('id-ID');
-      document.getElementById('cardClosing').textContent = totalClosing.toLocaleString('id-ID');
+      document.getElementById('tableHeader').innerHTML = `
+        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+          <th class="p-3">Tanggal</th>
+          <th class="p-3">Nama CS</th>
+          <th class="p-3">New Leads</th>
+          <th class="p-3">Existing</th>
+          <th class="p-3">Total Leads</th>
+          <th class="p-3">Potensial</th>
+          <th class="p-3">Closing Form</th>
+          <th class="p-3">Closing UP</th>
+        </tr>
+      `;
 
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
-
-      if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Tidak ada data untuk bulan Juli.</td></tr>`;
-      } else {
-        data.forEach(item => {
-          const tr = document.createElement('tr');
-          tr.className = 'hover:bg-slate-50';
-          tr.innerHTML = `
+      filteredData.forEach(item => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
             <td class="p-3 text-slate-500">${item.tanggal}</td>
             <td class="p-3 font-medium text-slate-900">${item.namaCS}</td>
             <td class="p-3 text-slate-600">${item.newLeads}</td>
@@ -204,66 +222,252 @@
             <td class="p-3 font-semibold text-blue-600">${item.totalLeads}</td>
             <td class="p-3 font-semibold text-yellow-600">${item.potensial}</td>
             <td class="p-3 font-semibold text-green-600">${item.closingForm}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
-
-      updateChart(data);
-    }
-
-    function updateChart(data) {
-      const csSummary = {};
-      data.forEach(item => {
-        if (!csSummary[item.namaCS]) {
-          csSummary[item.namaCS] = { total: 0, potensial: 0, closing: 0 };
-        }
-        csSummary[item.namaCS].total += item.totalLeads;
-        csSummary[item.namaCS].potensial += item.potensial;
-        csSummary[item.namaCS].closing += item.closingForm;
+            <td class="p-3 font-semibold text-purple-600">${item.closingUP}</td>
+          </tr>
+        `;
       });
 
-      const labels = Object.keys(csSummary);
-      const totals = labels.map(l => csSummary[l].total);
-      const potensials = labels.map(l => csSummary[l].potensial);
-      const closings = labels.map(l => csSummary[l].closing);
+      // Pie Chart: Perbandingan Status Result Leads
+      const totalPot = filteredData.reduce((s, d) => s + d.potensial, 0);
+      const totalClose = filteredData.reduce((s, d) => s + d.closingForm, 0);
+      const totalTidakPot = filteredData.reduce((s, d) => s + d.tidakPotensial, 0);
+      const totalFull = filteredData.reduce((s, d) => s + d.kuotaFull, 0);
+      const totalUP = filteredData.reduce((s, d) => s + d.closingUP, 0);
 
-      const ctx = document.getElementById('leadsChart').getContext('2d');
+      renderPieChart(
+        ['Potensial', 'Closing Form', 'Tidak Potensial', 'Kuota Full', 'Closing UP'],
+        [totalPot, totalClose, totalTidakPot, totalFull, totalUP],
+        ['#EAB308', '#22C55E', '#EF4444', '#64748B', '#A855F7']
+      );
+    }
 
-      if (chartInstance) {
-        chartInstance.destroy();
+    // --- MENU 2: REKAPITULASI CMB ---
+    function renderRekapCMB() {
+      document.getElementById('filterLabel').textContent = "Filter Unit:";
+      document.getElementById('chartTitle').textContent = "📊 CMB per Jenjang dan Unit";
+      let data = [];
+      let currentUnit = '';
+      let currentJenjang = '';
+      // Blok CMB menggunakan kolom P-Y. Baris dengan program dan angka pada S adalah data rekap.
+      for (let i = 1; i < rawRows.length; i++) {
+        const c = rawRows[i].c;
+        if (!c || !c[17] || !c[18]) continue;
+
+        if (c[15]?.v) currentUnit = String(c[15].v).trim();
+        if (c[16]?.v) currentJenjang = String(c[16].v).trim();
+        const program = String(c[17].v || '').trim();
+        const total = Number(c[18].v) || 0;
+        if (program && program !== 'Program' && program !== 'Jumlah') {
+          data.push({
+            unit: currentUnit,
+            jenjang: currentJenjang,
+            program,
+            totalCMB: total
+          });
+        }
       }
 
+      populateFilter(data, 'unit');
+      const selectedBulan = document.getElementById('csFilter').value;
+      const filteredData = (selectedBulan === 'ALL') ? data : data.filter(d => d.unit === selectedBulan);
+
+      const totalCMB = filteredData.reduce((s, d) => s + d.totalCMB, 0);
+
+      document.getElementById('metricsContainer').innerHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-green-500">
+          <p class="text-sm font-medium text-slate-500">Total CMB</p>
+          <p class="text-3xl font-bold text-slate-900 mt-2">${totalCMB.toLocaleString('id-ID')}</p>
+        </div>
+      `;
+
+      document.getElementById('tableHeader').innerHTML = `
+        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+          <th class="p-3">Unit</th>
+          <th class="p-3">Jenjang</th>
+          <th class="p-3">Program</th>
+          <th class="p-3">Total CMB</th>
+        </tr>
+      `;
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      filteredData.forEach(item => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-medium text-slate-900">${item.unit || '-'}</td>
+            <td class="p-3 text-slate-600">${item.jenjang || '-'}</td>
+            <td class="p-3 text-slate-600">${item.program}</td>
+            <td class="p-3 font-semibold text-green-600">${item.totalCMB.toLocaleString('id-ID')}</td>
+          </tr>
+        `;
+      });
+
+      const cmbJenjang = [...new Set(filteredData.map(item => item.jenjang).filter(Boolean))];
+      const cmbUnits = [...new Set(filteredData.map(item => item.unit).filter(Boolean))];
+      const cmbSlices = cmbUnits.flatMap(unit => cmbJenjang.map(jenjang => ({
+        label: `${jenjang} - ${unit}`,
+        value: filteredData
+          .filter(item => item.unit === unit && item.jenjang === jenjang)
+          .reduce((sum, item) => sum + item.totalCMB, 0)
+      })));
+      renderPieChart(
+        cmbSlices.map(slice => slice.label),
+        cmbSlices.map(slice => slice.value),
+        ['#2563EB', '#16A34A', '#EA580C', '#9333EA', '#0F766E', '#CA8A04', '#DB2777', '#475569']
+      );
+    }
+
+    // --- MENU 3: REKAPITULASI JUMLAH MURID ---
+    function renderRekapMurid() {
+      document.getElementById('filterLabel').textContent = "Filter Sumber:";
+      document.getElementById('chartTitle').textContent = "📊 Jumlah Murid per Jenjang";
+      let data = [];
+      // Rekap murid memiliki total per jenjang di kolom AC-AK dan AO-AW.
+      const jenjangHomeschooling = [
+        { label: 'SD', row: 15, totalColumn: 36 },
+        { label: 'SMP', row: 30, totalColumn: 36 },
+        { label: 'SMA', row: 45, totalColumn: 36 }
+      ];
+      jenjangHomeschooling.forEach(({ label, row, totalColumn }) => {
+        const c = rawRows[row]?.c;
+        if (c && c[28] && String(c[28].v).trim() === 'Jumlah') {
+          data.push({ sumber: 'Homeschooling Kak Seto', jenjang: label, totalMurid: Number(c[totalColumn]?.v) || 0 });
+        }
+      });
+
+      const jenjangSchool = [
+        { label: 'SD', row: 15, totalColumn: 48 },
+        { label: 'SMP', row: 30, totalColumn: 48 }
+      ];
+      jenjangSchool.forEach(({ label, row, totalColumn }) => {
+        const c = rawRows[row]?.c;
+        if (c && c[40] && String(c[40].v).trim() === 'Jumlah') {
+          data.push({ sumber: 'Kak Seto School', jenjang: label, totalMurid: Number(c[totalColumn]?.v) || 0 });
+        }
+      });
+
+      populateFilter(data, 'sumber');
+      const selectedBulan = document.getElementById('csFilter').value;
+      const filteredData = (selectedBulan === 'ALL') ? data : data.filter(d => d.sumber === selectedBulan);
+
+      const totalMurid = filteredData.reduce((s, d) => s + d.totalMurid, 0);
+
+      document.getElementById('metricsContainer').innerHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-purple-500">
+          <p class="text-sm font-medium text-slate-500">Total Murid</p>
+          <p class="text-3xl font-bold text-slate-900 mt-2">${totalMurid.toLocaleString('id-ID')}</p>
+        </div>
+      `;
+
+      document.getElementById('tableHeader').innerHTML = `
+        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+          <th class="p-3">Sumber Data</th>
+          <th class="p-3">Jenjang</th>
+          <th class="p-3">Total Murid</th>
+        </tr>
+      `;
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      filteredData.forEach(item => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-medium text-slate-900">${item.sumber}</td>
+            <td class="p-3 text-slate-600">${item.jenjang}</td>
+            <td class="p-3 font-semibold text-emerald-600">${item.totalMurid.toLocaleString('id-ID')}</td>
+          </tr>
+        `;
+      });
+
+      const muridJenjang = ['SD', 'SMP', 'SMA'].filter(jenjang =>
+        filteredData.some(item => item.jenjang === jenjang)
+      );
+      const muridSources = [...new Set(filteredData.map(item => item.sumber))];
+      const muridSlices = muridSources.flatMap(sumber => muridJenjang.map(jenjang => ({
+        label: `${jenjang} - ${sumber}`,
+        value: filteredData.find(item => item.sumber === sumber && item.jenjang === jenjang)?.totalMurid || 0
+      })));
+      renderPieChart(
+        muridSlices.map(slice => slice.label),
+        muridSlices.map(slice => slice.value),
+        ['#7C3AED', '#0891B2', '#C026D3', '#0F766E', '#EA580C', '#2563EB']
+      );
+    }
+
+    // --- UTILITIES ---
+    function isJuly(dateStr) {
+      if (!dateStr) return false;
+      const str = String(dateStr).toLowerCase();
+      return str.includes('juli') || str.includes('jul') || str.includes('/07/') || str.includes('-07-');
+    }
+
+    function populateFilter(data, keyName) {
+      const select = document.getElementById('csFilter');
+      const currentVal = select.value;
+      const set = new Set(data.map(item => item[keyName]).filter(val => val && val !== '-'));
+      
+      select.innerHTML = '<option value="ALL">Semua Data</option>';
+      set.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.textContent = item;
+        select.appendChild(option);
+      });
+
+      if (set.has(currentVal)) select.value = currentVal;
+    }
+
+    // Fungsi Khusus Generasi Pie/Doughnut Chart
+    function renderPieChart(labels, dataValues, colors) {
+      const ctx = document.getElementById('mainChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
       chartInstance = new Chart(ctx, {
-        type: 'bar',
+        type: 'pie',
         data: {
           labels: labels,
-          datasets: [
-            { label: 'Total Leads', data: totals, backgroundColor: '#3B82F6' },
-            { label: 'Potensial', data: potensials, backgroundColor: '#EAB308' },
-            { label: 'Closing Form', data: closings, backgroundColor: '#22C55E' }
-          ]
+          datasets: [{
+            data: dataValues,
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true } }
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: { size: 12 },
+                padding: 16
+              }
+            }
+          }
         }
       });
     }
 
-    document.getElementById('csFilter').addEventListener('change', (e) => {
-      const selected = e.target.value;
-      if (selected === 'ALL') {
-        renderDashboard(rawData);
-      } else {
-        const filtered = rawData.filter(item => item.namaCS === selected);
-        renderDashboard(filtered);
-      }
-    });
+    function renderBarChart(labels, datasets) {
+      const ctx = document.getElementById('mainChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    }
+
+    document.getElementById('csFilter').addEventListener('change', renderCurrentMenu);
 
     fetchData();
-    // Otomatis update data setiap 3 menit
     setInterval(fetchData, 180000);
   </script>
 </body>
