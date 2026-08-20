@@ -47,32 +47,20 @@
 
     <!-- METRICS -->
     <div id="metricsContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Kartu Metrik Diisi Dinamis Lewat JS -->
+      <!-- Kartu Metrik Diisi Dinamis -->
     </div>
 
     <!-- GRAFIK PIE -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-      <h2 id="chartTitle" class="text-lg font-semibold mb-4">📊 Persentase & Distribusi Data (Pie Chart)</h2>
+      <h2 id="chartTitle" class="text-lg font-semibold mb-4">📊 Persentase & Distribusi Data</h2>
       <div class="relative h-80 w-full flex justify-center items-center">
         <canvas id="mainChart"></canvas>
       </div>
     </div>
 
-    <!-- TABEL DATA -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <h2 id="tableTitle" class="text-lg font-semibold mb-4">📋 Laporan Detail</h2>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead id="tableHeader">
-            <!-- Header Diisi Dinamis Lewat JS -->
-          </thead>
-          <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
-            <tr>
-              <td colspan="8" class="p-4 text-center text-slate-400">Sedang menyinkronkan data...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- CONTAINER TABEL DINAMIS -->
+    <div id="dynamicTableContainer" class="space-y-6">
+      <!-- Diisi oleh JS -->
     </div>
 
   </div>
@@ -94,9 +82,7 @@
 
         window.handleGoogleResponse = (json) => {
           try {
-            if (json.status !== 'ok') {
-              throw new Error('Respons Google Sheets tidak valid.');
-            }
+            if (json.status !== 'ok') throw new Error('Respons Google Sheets tidak valid.');
             rawRows = json.table.rows;
             renderCurrentMenu();
             resolve();
@@ -110,8 +96,8 @@
         document.head.appendChild(script);
       }).catch((err) => {
         console.error("Gagal mengambil data:", err);
-        document.getElementById('tableBody').innerHTML =
-          `<tr><td colspan="8" class="p-4 text-center text-red-500">Gagal terhubung: ${err.message}</td></tr>`;
+        document.getElementById('dynamicTableContainer').innerHTML =
+          `<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center text-red-500 font-semibold">Gagal terhubung: ${err.message}</div>`;
       });
     }
 
@@ -148,7 +134,6 @@
       let data = [];
       let currentDate = '';
 
-      // Pemetaan Indeks Kolom A - K (0 - 10)
       for (let i = 0; i < rawRows.length; i++) {
         const c = rawRows[i].c;
         if (!c || !c[1]) continue;
@@ -161,15 +146,15 @@
           data.push({
             tanggal: dateVal,
             namaCS: namaCS,
-            newLeads: c[2] ? (c[2].v || 0) : 0,        // Col C
-            existingLeads: c[3] ? (c[3].v || 0) : 0,   // Col D
-            totalLeads: c[4] ? (c[4].v || 0) : 0,      // Col E
-            callIn: c[5] ? (c[5].v || 0) : 0,          // Col F
-            potensial: c[6] ? (c[6].v || 0) : 0,       // Col G
-            closingForm: c[7] ? (c[7].v || 0) : 0,     // Col H
-            tidakPotensial: c[8] ? (c[8].v || 0) : 0,  // Col I
-            kuotaFull: c[9] ? (c[9].v || 0) : 0,       // Col J
-            closingUP: c[10] ? (c[10].v || 0) : 0      // Col K
+            newLeads: c[2] ? (c[2].v || 0) : 0,
+            existingLeads: c[3] ? (c[3].v || 0) : 0,
+            totalLeads: c[4] ? (c[4].v || 0) : 0,
+            callIn: c[5] ? (c[5].v || 0) : 0,
+            potensial: c[6] ? (c[6].v || 0) : 0,
+            closingForm: c[7] ? (c[7].v || 0) : 0,
+            tidakPotensial: c[8] ? (c[8].v || 0) : 0,
+            kuotaFull: c[9] ? (c[9].v || 0) : 0,
+            closingUP: c[10] ? (c[10].v || 0) : 0
           });
         }
       }
@@ -197,23 +182,27 @@
         </div>
       `;
 
-      document.getElementById('tableHeader').innerHTML = `
-        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-          <th class="p-3">Tanggal</th>
-          <th class="p-3">Nama CS</th>
-          <th class="p-3">New Leads</th>
-          <th class="p-3">Existing</th>
-          <th class="p-3">Total Leads</th>
-          <th class="p-3">Potensial</th>
-          <th class="p-3">Closing Form</th>
-          <th class="p-3">Closing UP</th>
-        </tr>
-      `;
+      let tableHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <h2 class="text-lg font-semibold mb-4">📋 Laporan Detail Leads</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+                  <th class="p-3">Tanggal</th>
+                  <th class="p-3">Nama CS</th>
+                  <th class="p-3">New Leads</th>
+                  <th class="p-3">Existing</th>
+                  <th class="p-3">Total Leads</th>
+                  <th class="p-3">Potensial</th>
+                  <th class="p-3">Closing Form</th>
+                  <th class="p-3">Closing UP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-sm">`;
 
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = '';
       filteredData.forEach(item => {
-        tbody.innerHTML += `
+        tableHTML += `
           <tr class="hover:bg-slate-50">
             <td class="p-3 text-slate-500">${item.tanggal}</td>
             <td class="p-3 font-medium text-slate-900">${item.namaCS}</td>
@@ -223,11 +212,12 @@
             <td class="p-3 font-semibold text-yellow-600">${item.potensial}</td>
             <td class="p-3 font-semibold text-green-600">${item.closingForm}</td>
             <td class="p-3 font-semibold text-purple-600">${item.closingUP}</td>
-          </tr>
-        `;
+          </tr>`;
       });
 
-      // Pie Chart: Perbandingan Status Result Leads
+      tableHTML += `</tbody></table></div></div>`;
+      document.getElementById('dynamicTableContainer').innerHTML = tableHTML;
+
       const totalPot = filteredData.reduce((s, d) => s + d.potensial, 0);
       const totalClose = filteredData.reduce((s, d) => s + d.closingForm, 0);
       const totalTidakPot = filteredData.reduce((s, d) => s + d.tidakPotensial, 0);
@@ -241,37 +231,43 @@
       );
     }
 
-    // --- MENU 2: REKAPITULASI CMB ---
+    // --- MENU 2: REKAPITULASI CMB (MATRIKS REKAP DARI GAMBAR CONTOH) ---
     function renderRekapCMB() {
       document.getElementById('filterLabel').textContent = "Filter Unit:";
-      document.getElementById('chartTitle').textContent = "📊 CMB per Jenjang dan Unit";
-      let data = [];
+      document.getElementById('chartTitle').textContent = "📊 Distribusi CMB Per Jenjang";
+      
+      let rawData = [];
       let currentUnit = '';
       let currentJenjang = '';
-      // Blok CMB menggunakan kolom P-Y. Baris dengan program dan angka pada S adalah data rekap.
+
       for (let i = 1; i < rawRows.length; i++) {
         const c = rawRows[i].c;
-        if (!c || !c[17] || !c[18]) continue;
+        if (!c) continue;
 
         if (c[15]?.v) currentUnit = String(c[15].v).trim();
         if (c[16]?.v) currentJenjang = String(c[16].v).trim();
+        if (!c[17] || !c[18]) continue;
         const program = String(c[17].v || '').trim();
         const total = Number(c[18].v) || 0;
+
         if (program && program !== 'Program' && program !== 'Jumlah') {
-          data.push({
-            unit: currentUnit,
-            jenjang: currentJenjang,
+          rawData.push({
+            unit: currentUnit || 'Umum',
+            jenjang: currentJenjang || 'Lainnya',
             program,
             totalCMB: total
           });
         }
       }
 
-      populateFilter(data, 'unit');
-      const selectedBulan = document.getElementById('csFilter').value;
-      const filteredData = (selectedBulan === 'ALL') ? data : data.filter(d => d.unit === selectedBulan);
+      populateFilter(rawData, 'unit');
+      const selectedUnit = document.getElementById('csFilter').value;
+      const data = (selectedUnit === 'ALL') ? rawData : rawData.filter(d => d.unit === selectedUnit);
 
-      const totalCMB = filteredData.reduce((s, d) => s + d.totalCMB, 0);
+      const totalCMB = data.reduce((s, d) => s + d.totalCMB, 0);
+      const units = [...new Set(data.map(d => d.unit))];
+      const jenjangs = [...new Set(data.map(d => d.jenjang))];
+      const programs = [...new Set(data.map(d => d.program))];
 
       document.getElementById('metricsContainer').innerHTML = `
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-green-500">
@@ -280,117 +276,266 @@
         </div>
       `;
 
-      document.getElementById('tableHeader').innerHTML = `
-        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-          <th class="p-3">Unit</th>
-          <th class="p-3">Jenjang</th>
-          <th class="p-3">Program</th>
-          <th class="p-3">Total CMB</th>
-        </tr>
-      `;
+      let htmlContainer = '';
 
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = '';
-      filteredData.forEach(item => {
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 font-medium text-slate-900">${item.unit || '-'}</td>
-            <td class="p-3 text-slate-600">${item.jenjang || '-'}</td>
-            <td class="p-3 text-slate-600">${item.program}</td>
-            <td class="p-3 font-semibold text-green-600">${item.totalCMB.toLocaleString('id-ID')}</td>
-          </tr>
-        `;
+      // 1. TABEL RINGKASAN: REKAP PER PROGRAM (SELURUH JENJANG)
+      htmlContainer += `
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-emerald-700 text-white font-bold text-sm py-2 px-4 rounded-t-lg">
+            REKAP CMB PER PROGRAM (SELURUH JENJANG)
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-center border-collapse border border-slate-200 text-sm">
+              <thead>
+                <tr class="bg-blue-900 text-white font-bold">
+                  <th class="p-2.5 border border-blue-950 text-left">Program</th>
+                  ${jenjangs.map(j => `<th class="p-2.5 border border-blue-950">${j}</th>`).join('')}
+                  <th class="p-2.5 border border-blue-950 bg-blue-950">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+      let jenjangTotals = Array(jenjangs.length).fill(0);
+
+      programs.forEach(prog => {
+        let pSum = 0;
+        htmlContainer += `<tr class="hover:bg-slate-50"><td class="p-2 border border-slate-200 font-bold text-left bg-slate-50">${prog}</td>`;
+
+        jenjangs.forEach((j, idx) => {
+          const val = data.filter(d => d.program === prog && d.jenjang === j).reduce((s, d) => s + d.totalCMB, 0);
+          pSum += val;
+          jenjangTotals[idx] += val;
+          htmlContainer += `<td class="p-2 border border-slate-200">${val}</td>`;
+        });
+
+        htmlContainer += `<td class="p-2 border border-slate-200 font-bold bg-amber-50">${pSum}</td></tr>`;
       });
 
-      const cmbJenjang = [...new Set(filteredData.map(item => item.jenjang).filter(Boolean))];
-      const cmbUnits = [...new Set(filteredData.map(item => item.unit).filter(Boolean))];
-      const cmbSlices = cmbUnits.flatMap(unit => cmbJenjang.map(jenjang => ({
-        label: `${jenjang} - ${unit}`,
-        value: filteredData
-          .filter(item => item.unit === unit && item.jenjang === jenjang)
-          .reduce((sum, item) => sum + item.totalCMB, 0)
-      })));
-      renderPieChart(
-        cmbSlices.map(slice => slice.label),
-        cmbSlices.map(slice => slice.value),
-        ['#2563EB', '#16A34A', '#EA580C', '#9333EA', '#0F766E', '#CA8A04', '#DB2777', '#475569']
-      );
+      htmlContainer += `
+                <tr class="bg-blue-900 text-white font-bold text-base">
+                  <td class="p-3 border border-blue-950 text-left">TOTAL</td>`;
+      jenjangTotals.forEach(tot => {
+        htmlContainer += `<td class="p-3 border border-blue-950">${tot}</td>`;
+      });
+      htmlContainer += `<td class="p-3 border border-blue-950 bg-amber-400 text-slate-900 font-extrabold">${totalCMB}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+
+      // 2. TABEL MATRIKS DETAIL DIBAGI PER UNIT & JENJANG (GAYA TABEL KUNING)
+      units.forEach(unit => {
+        const unitJenjangs = [...new Set(data.filter(d => d.unit === unit).map(d => d.jenjang))];
+
+        unitJenjangs.forEach(jenj => {
+          const filteredItems = data.filter(d => d.unit === unit && d.jenjang === jenj);
+          const itemPrograms = [...new Set(filteredItems.map(d => d.program))];
+          let subtotalJenjang = 0;
+
+          htmlContainer += `
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="bg-blue-900 text-white font-bold text-sm py-2 px-4 rounded-t-lg">
+                REKAP CMB ${unit.toUpperCase()} - JENJANG ${jenj.toUpperCase()}
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-center border-collapse border border-slate-200 text-xs md:text-sm">
+                  <thead>
+                    <tr class="bg-amber-300 font-bold text-slate-900">
+                      <th class="p-2.5 border border-slate-300 text-left">Program</th>
+                      <th class="p-2.5 border border-slate-300 w-32">Jumlah CMB</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+
+          itemPrograms.forEach(prog => {
+            const val = filteredItems.filter(d => d.program === prog).reduce((s, d) => s + d.totalCMB, 0);
+            subtotalJenjang += val;
+
+            htmlContainer += `
+              <tr class="hover:bg-slate-50">
+                <td class="p-2 border border-slate-200 font-medium text-left">${prog}</td>
+                <td class="p-2 border border-slate-200">${val}</td>
+              </tr>`;
+          });
+
+          htmlContainer += `
+                    <tr class="bg-amber-300 font-bold text-slate-900">
+                      <td class="p-2.5 border border-slate-300 text-left">JUMLAH (${jenj})</td>
+                      <td class="p-2.5 border border-slate-300 bg-amber-400 text-base">${subtotalJenjang}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>`;
+        });
+      });
+
+      document.getElementById('dynamicTableContainer').innerHTML = htmlContainer;
+
+      // Render Pie Chart
+      renderPieChart(jenjangs, jenjangTotals, ['#2563EB', '#16A34A', '#EA580C', '#9333EA', '#CA8A04']);
     }
 
-    // --- MENU 3: REKAPITULASI JUMLAH MURID ---
+    // --- MENU 3: REKAPITULASI MURID ---
     function renderRekapMurid() {
       document.getElementById('filterLabel').textContent = "Filter Sumber:";
-      document.getElementById('chartTitle').textContent = "📊 Jumlah Murid per Jenjang";
-      let data = [];
-      // Rekap murid memiliki total per jenjang di kolom AC-AK dan AO-AW.
-      const jenjangHomeschooling = [
-        { label: 'SD', row: 15, totalColumn: 36 },
-        { label: 'SMP', row: 30, totalColumn: 36 },
-        { label: 'SMA', row: 45, totalColumn: 36 }
-      ];
-      jenjangHomeschooling.forEach(({ label, row, totalColumn }) => {
-        const c = rawRows[row]?.c;
-        if (c && c[28] && String(c[28].v).trim() === 'Jumlah') {
-          data.push({ sumber: 'Homeschooling Kak Seto', jenjang: label, totalMurid: Number(c[totalColumn]?.v) || 0 });
+      document.getElementById('chartTitle').textContent = "📊 Distribusi Murid per Jenjang";
+
+      const programList = ['DLP', 'DL', 'DLT', 'INK', 'KOM', 'KOP', 'KOR'];
+
+      const sections = [
+        {
+          sumber: 'Homeschooling Kak Seto',
+          title: 'HOMESCHOOLING KAK SETO',
+          jenjangs: [
+            { name: 'SD', rows: [{ class: '1', rowIdx: 10 }, { class: '2', rowIdx: 11 }, { class: '3', rowIdx: 12 }, { class: '4', rowIdx: 13 }, { class: '5', rowIdx: 14 }, { class: '6', rowIdx: 15 }], progStartCol: 29 },
+            { name: 'SMP', rows: [{ class: '7', rowIdx: 28 }, { class: '8', rowIdx: 29 }, { class: '9', rowIdx: 30 }], progStartCol: 29 },
+            { name: 'SMA / PAKET C', rows: [{ class: '10', rowIdx: 43 }, { class: '11', rowIdx: 44 }, { class: '12', rowIdx: 45 }], progStartCol: 29 }
+          ]
+        },
+        {
+          sumber: 'Kak Seto School',
+          title: 'KAK SETO SCHOOL',
+          jenjangs: [
+            { name: 'SD', rows: [{ class: '1', rowIdx: 10 }, { class: '2', rowIdx: 11 }, { class: '3', rowIdx: 12 }, { class: '4', rowIdx: 13 }, { class: '5', rowIdx: 14 }, { class: '6', rowIdx: 15 }], progStartCol: 41 },
+            { name: 'SMP', rows: [{ class: '7', rowIdx: 28 }, { class: '8', rowIdx: 29 }, { class: '9', rowIdx: 30 }], progStartCol: 41 }
+          ]
         }
+      ];
+
+      populateFilter([
+        { sumber: 'Homeschooling Kak Seto' },
+        { sumber: 'Kak Seto School' }
+      ], 'sumber');
+
+      const selectedSumber = document.getElementById('csFilter').value;
+      const filteredSections = (selectedSumber === 'ALL') ? sections : sections.filter(s => s.sumber === selectedSumber);
+
+      let htmlContent = '';
+      let overallTotal = 0;
+      let jenjangSummaryMap = {};
+      let programSummaryMap = { 'DLP':0, 'DL':0, 'DLT':0, 'INK':0, 'KOM':0, 'KOP':0, 'KOR':0 };
+
+      filteredSections.forEach(sec => {
+        sec.jenjangs.forEach(j => {
+          let jenjangTotal = 0;
+          let progTotals = Array(programList.length).fill(0);
+
+          htmlContent += `
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="bg-blue-900 text-white font-bold text-sm py-2 px-4 rounded-t-lg">
+                ${sec.title} - ${j.name}
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-center border-collapse border border-slate-200 text-xs md:text-sm">
+                  <thead>
+                    <tr class="bg-amber-300 font-bold text-slate-900">
+                      <th class="p-2 border border-slate-300 w-20">Kelas</th>
+                      ${programList.map(p => `<th class="p-2 border border-slate-300">${p}</th>`).join('')}
+                      <th class="p-2 border border-slate-300 bg-amber-400">TOTAL</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+
+          j.rows.forEach(r => {
+            const rawRow = rawRows[r.rowIdx]?.c;
+            let rowSum = 0;
+
+            htmlContent += `<tr class="hover:bg-slate-50"><td class="p-2 border border-slate-200 font-bold">${r.class}</td>`;
+
+            programList.forEach((p, idx) => {
+              const val = Number(rawRow?.[j.progStartCol + idx]?.v) || 0;
+              rowSum += val;
+              progTotals[idx] += val;
+              programSummaryMap[p] += val;
+              htmlContent += `<td class="p-2 border border-slate-200">${val}</td>`;
+            });
+
+            jenjangTotal += rowSum;
+            htmlContent += `<td class="p-2 border border-slate-200 font-bold bg-amber-50">${rowSum}</td></tr>`;
+          });
+
+          htmlContent += `
+                    <tr class="bg-amber-300 font-bold text-slate-900">
+                      <td class="p-2 border border-slate-300">JUMLAH</td>`;
+          progTotals.forEach(pt => {
+            htmlContent += `<td class="p-2 border border-slate-300">${pt}</td>`;
+          });
+          htmlContent += `<td class="p-2 border border-slate-300 bg-amber-400 text-base">${jenjangTotal}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>`;
+
+          overallTotal += jenjangTotal;
+          jenjangSummaryMap[j.name] = (jenjangSummaryMap[j.name] || 0) + jenjangTotal;
+        });
       });
 
-      const jenjangSchool = [
-        { label: 'SD', row: 15, totalColumn: 48 },
-        { label: 'SMP', row: 30, totalColumn: 48 }
-      ];
-      jenjangSchool.forEach(({ label, row, totalColumn }) => {
-        const c = rawRows[row]?.c;
-        if (c && c[40] && String(c[40].v).trim() === 'Jumlah') {
-          data.push({ sumber: 'Kak Seto School', jenjang: label, totalMurid: Number(c[totalColumn]?.v) || 0 });
-        }
+      let summaryTableHTML = `
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-emerald-700 text-white font-bold text-sm py-2 px-4 rounded-t-lg">
+            REKAP PER PROGRAM (SELURUH JENJANG)
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-center border-collapse border border-slate-200 text-sm">
+              <thead>
+                <tr class="bg-blue-900 text-white font-bold">
+                  <th class="p-2.5 border border-blue-950 text-left">Program</th>
+                  ${Object.keys(jenjangSummaryMap).map(j => `<th class="p-2.5 border border-blue-950">${j}</th>`).join('')}
+                  <th class="p-2.5 border border-blue-950 bg-blue-950">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+      programList.forEach(p => {
+        summaryTableHTML += `<tr class="hover:bg-slate-50"><td class="p-2 border border-slate-200 font-bold text-left bg-slate-50">${p}</td>`;
+        let pTotal = 0;
+        Object.keys(jenjangSummaryMap).forEach(j => {
+          let pVal = 0;
+          filteredSections.forEach(sec => {
+            const jenjObj = sec.jenjangs.find(item => item.name === j);
+            if (jenjObj) {
+              jenjObj.rows.forEach(r => {
+                const pIdx = programList.indexOf(p);
+                pVal += Number(rawRows[r.rowIdx]?.c?.[jenjObj.progStartCol + pIdx]?.v) || 0;
+              });
+            }
+          });
+          pTotal += pVal;
+          summaryTableHTML += `<td class="p-2 border border-slate-200">${pVal}</td>`;
+        });
+        summaryTableHTML += `<td class="p-2 border border-slate-200 font-bold bg-amber-50">${pTotal}</td></tr>`;
       });
 
-      populateFilter(data, 'sumber');
-      const selectedBulan = document.getElementById('csFilter').value;
-      const filteredData = (selectedBulan === 'ALL') ? data : data.filter(d => d.sumber === selectedBulan);
-
-      const totalMurid = filteredData.reduce((s, d) => s + d.totalMurid, 0);
+      summaryTableHTML += `
+                <tr class="bg-blue-900 text-white font-bold text-base">
+                  <td class="p-3 border border-blue-950 text-left">TOTAL</td>`;
+      Object.keys(jenjangSummaryMap).forEach(j => {
+        summaryTableHTML += `<td class="p-3 border border-blue-950">${jenjangSummaryMap[j]}</td>`;
+      });
+      summaryTableHTML += `<td class="p-3 border border-blue-950 bg-amber-400 text-slate-900 font-extrabold">${overallTotal}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`;
 
       document.getElementById('metricsContainer').innerHTML = `
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-purple-500">
-          <p class="text-sm font-medium text-slate-500">Total Murid</p>
-          <p class="text-3xl font-bold text-slate-900 mt-2">${totalMurid.toLocaleString('id-ID')}</p>
+          <p class="text-sm font-medium text-slate-500">Total Keseluruhan Murid</p>
+          <p class="text-3xl font-bold text-slate-900 mt-2">${overallTotal.toLocaleString('id-ID')}</p>
         </div>
       `;
 
-      document.getElementById('tableHeader').innerHTML = `
-        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
-          <th class="p-3">Sumber Data</th>
-          <th class="p-3">Jenjang</th>
-          <th class="p-3">Total Murid</th>
-        </tr>
-      `;
+      document.getElementById('dynamicTableContainer').innerHTML = summaryTableHTML + htmlContent;
 
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = '';
-      filteredData.forEach(item => {
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 font-medium text-slate-900">${item.sumber}</td>
-            <td class="p-3 text-slate-600">${item.jenjang}</td>
-            <td class="p-3 font-semibold text-emerald-600">${item.totalMurid.toLocaleString('id-ID')}</td>
-          </tr>
-        `;
-      });
-
-      const muridJenjang = ['SD', 'SMP', 'SMA'].filter(jenjang =>
-        filteredData.some(item => item.jenjang === jenjang)
-      );
-      const muridSources = [...new Set(filteredData.map(item => item.sumber))];
-      const muridSlices = muridSources.flatMap(sumber => muridJenjang.map(jenjang => ({
-        label: `${jenjang} - ${sumber}`,
-        value: filteredData.find(item => item.sumber === sumber && item.jenjang === jenjang)?.totalMurid || 0
-      })));
       renderPieChart(
-        muridSlices.map(slice => slice.label),
-        muridSlices.map(slice => slice.value),
-        ['#7C3AED', '#0891B2', '#C026D3', '#0F766E', '#EA580C', '#2563EB']
+        Object.keys(jenjangSummaryMap),
+        Object.values(jenjangSummaryMap),
+        ['#2563EB', '#16A34A', '#EA580C', '#9333EA']
       );
     }
 
@@ -417,7 +562,6 @@
       if (set.has(currentVal)) select.value = currentVal;
     }
 
-    // Fungsi Khusus Generasi Pie/Doughnut Chart
     function renderPieChart(labels, dataValues, colors) {
       const ctx = document.getElementById('mainChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
@@ -445,22 +589,6 @@
               }
             }
           }
-        }
-      });
-    }
-
-    function renderBarChart(labels, datasets) {
-      const ctx = document.getElementById('mainChart').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
-
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-          plugins: { legend: { position: 'bottom' } }
         }
       });
     }
